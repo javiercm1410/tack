@@ -1,5 +1,5 @@
 # tack
-Read-only Slack for humans and agents. Charm styles the terminal output; `--json` provides stable machine output.
+Read-only Slack CLI for humans and agents. Use `--json` for stable machine output.
 
 ## Install
 
