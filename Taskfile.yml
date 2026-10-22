@@ -1,0 +1,25 @@
+version: '3'
+tasks:
+  build:
+    cmds: ['go build -trimpath -o bin/tack ./cmd/tack']
+  build:all:
+    cmds: ['sh scripts/build-all.sh']
+  test:
+    cmds: ['go test ./...']
+  test:race:
+    cmds: ['go test -race ./...']
+  lint:
+    cmds:
+      - test -z "$(gofmt -l .)"
+      - go vet ./...
+      - shellcheck scripts/*.sh
+  release:check:
+    cmds: ['goreleaser check']
+  release:snapshot:
+    cmds: ['goreleaser release --snapshot --clean']
+  check:
+    cmds:
+      - task: lint
+      - task: test:race
+      - task: build
+      - task: release:check
