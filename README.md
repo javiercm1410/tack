@@ -29,6 +29,20 @@ The macOS interactive `security ... -w` prompt can truncate long values; use `-w
 
 ## Workspace profiles
 
+Use the interactive setup to add a workspace:
+
+```sh
+tack config add                 # prompt for name, URL, and credential variable names
+tack config                     # show profiles and credential availability
+tack config --json              # machine-readable configuration, without token values
+tack config default accela      # set the persistent default
+```
+
+`config add` preserves existing profiles and asks before it saves. It requires an
+interactive terminal and does not accept token values. Export the chosen credential
+variables, then run `tack whoami --profile NAME --json` to verify access.
+
+
 Create `~/.config/tack/config.toml` (or `$XDG_CONFIG_HOME/tack/config.toml`):
 
 ```toml

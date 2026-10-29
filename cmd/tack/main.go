@@ -27,7 +27,7 @@ type options struct {
 	oldest, latest                                                                 time.Time
 }
 
-var commands = map[string]string{"whoami": "whoami", "mentions": "mentions --since 7d", "search": `search "build failure"`, "from": "from @me", "channel": "channel '#general'", "thread": `thread '<permalink>'`, "dms": "dms --limit 10", "dm": "dm @handle", "channels": "channels general", "user": "user @handle"}
+var commands = map[string]string{"config": "config [show | add [NAME] | default NAME]", "whoami": "whoami", "mentions": "mentions --since 7d", "search": `search "build failure"`, "from": "from @me", "channel": "channel '#general'", "thread": `thread '<permalink>'`, "dms": "dms --limit 10", "dm": "dm @handle", "channels": "channels general", "user": "user @handle"}
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -103,7 +103,7 @@ func parse(args []string, now time.Time) (options, error) {
 	if o.limit < 1 || o.limit > 200 {
 		return o, slack.Usage("--limit must be between 1 and 200")
 	}
-	bounds := map[string][2]int{"whoami": {0, 0}, "mentions": {0, 0}, "search": {1, 1}, "from": {1, 1}, "channel": {1, 1}, "thread": {1, 2}, "dms": {0, 0}, "dm": {1, 1}, "channels": {0, 1}, "user": {1, 1}}[o.command]
+	bounds := map[string][2]int{"config": {0, 2}, "whoami": {0, 0}, "mentions": {0, 0}, "search": {1, 1}, "from": {1, 1}, "channel": {1, 1}, "thread": {1, 2}, "dms": {0, 0}, "dm": {1, 1}, "channels": {0, 1}, "user": {1, 1}}[o.command]
 	if len(o.args) < bounds[0] || len(o.args) > bounds[1] {
 		return o, slack.Usage("usage: tack " + commands[o.command])
 	}
@@ -178,6 +178,11 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, getenv func(
 		}
 		return 0
 	}
+	if o.command == "config" {
+		info, statErr := os.Stdin.Stat()
+		interactive := statErr == nil && info.Mode()&os.ModeCharDevice != 0
+		return runConfig(o, os.Stdin, interactive, out, errOut, getenv)
+	}
 	profileEnv, err := config.Resolve(getenv, o.profile)
 	if err != nil {
 		return fail(out, errOut, o.json, err, nil)
@@ -228,7 +233,7 @@ func help(command string) string {
 	if command != "" {
 		s += "Usage: tack " + commands[command] + "\n"
 	} else {
-		for _, name := range []string{"whoami", "mentions", "search", "from", "channel", "thread", "dms", "dm", "channels", "user"} {
+		for _, name := range []string{"config", "whoami", "mentions", "search", "from", "channel", "thread", "dms", "dm", "channels", "user"} {
 			s += fmt.Sprintf("  %-10s tack %s\n", name, commands[name])
 		}
 	}

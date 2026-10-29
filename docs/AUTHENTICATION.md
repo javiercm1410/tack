@@ -32,6 +32,44 @@ Every child process of that shell inherits the values. Use a dedicated shell ses
 
 ## Multiple workspaces with profiles
 
+### Interactive setup
+
+Run `tack config add` in your terminal. The setup asks for:
+
+1. A unique profile name.
+2. The HTTPS URL of the Slack workspace.
+3. The names of the token and cookie environment variables.
+4. Whether this profile becomes the default.
+5. Confirmation before the file is saved.
+
+Press Enter to accept a displayed default. Enter `n` at the final prompt to cancel.
+An interrupted setup leaves the existing file unchanged. Existing profile names
+cannot be overwritten by setup. Use a new name or edit the TOML file.
+The first profile becomes the suggested default. Additional profiles preserve the
+current default unless you select a new default.
+
+```sh
+tack config add personal
+tack config
+tack config show --json
+tack config default accela
+tack config default accela --json
+```
+
+The setup saves environment variable names, not credential values. Populate these
+variables through your secret manager using the examples below. `tack config`
+reports whether both variables are set; it does not verify Slack authentication.
+Run `tack whoami --profile personal --json` to verify the configured session.
+
+The setup works before credentials exist. For automated setup, write the TOML file
+and use `tack config --json` to inspect it. Interactive setup rejects `--json` and
+piped input. Configuration changes preserve other profiles and replace the file
+atomically with private permissions. TOML comments and formatting are rewritten.
+`TACK_PROFILE` and `--profile` override the saved default for reads; they do not
+change which profile `tack config default NAME` saves as the persistent default.
+
+### Manual setup
+
 Create the configuration directory:
 
 ```sh

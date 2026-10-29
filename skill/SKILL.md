@@ -56,3 +56,12 @@ the legacy `SLACK_*` environment remains supported.
 tack --profile personal mentions --since 7d --limit 20 --json
 tack whoami --profile accela --json
 ```
+
+## Configuration commands
+
+Use `tack config --json` to inspect profile URLs, environment variable names,
+credential availability, and the default profile. Output excludes credential values.
+Use `tack config default NAME --json` when the user requests a persistent default.
+`tack config add [NAME]` is a human-operated terminal setup. It prompts for profile
+metadata, never token values, and preserves existing profiles. For automated setup,
+edit TOML only when requested. Verify access with `tack whoami --profile NAME --json`.
