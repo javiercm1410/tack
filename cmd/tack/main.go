@@ -11,12 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/javiercm1410/tack/internal/config"
 	"github.com/javiercm1410/tack/internal/slack"
 )
 
 var version = "dev"
 
 type options struct {
+	profile                                                                        string
 	command                                                                        string
 	args                                                                           []string
 	json, debug, noCache, full, threads, broadcast, replies, unread, help, version bool
@@ -36,6 +38,7 @@ func parse(args []string, now time.Time) (options, error) {
 	o := options{limit: 20}
 	fs := flag.NewFlagSet("tack", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
+	fs.StringVar(&o.profile, "profile", "", "configuration profile")
 	fs.BoolVar(&o.json, "json", false, "JSON output")
 	fs.BoolVar(&o.debug, "debug", false, "safe request diagnostics")
 	fs.BoolVar(&o.noCache, "no-cache", false, "bypass disk cache")
@@ -175,7 +178,11 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, getenv func(
 		}
 		return 0
 	}
-	creds, warning, err := slack.LoadCredentials(getenv)
+	profileEnv, err := config.Resolve(getenv, o.profile)
+	if err != nil {
+		return fail(out, errOut, o.json, err, nil)
+	}
+	creds, warning, err := slack.LoadCredentials(profileEnv)
 	if err != nil {
 		return fail(out, errOut, o.json, err, nil)
 	}
@@ -225,7 +232,7 @@ func help(command string) string {
 			s += fmt.Sprintf("  %-10s tack %s\n", name, commands[name])
 		}
 	}
-	s += "\nGlobal: --json --limit N (1-200) --debug --no-cache --full --help --version\n"
+	s += "\nGlobal: --profile NAME --json --limit N (1-200) --debug --no-cache --full --help --version\n"
 	if command == "" || command == "mentions" {
 		s += "Mentions: --since 7d --until DATE --threads --include-broadcast\n"
 	}

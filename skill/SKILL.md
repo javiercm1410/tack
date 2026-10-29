@@ -41,3 +41,18 @@ Use `--no-cache` if disk caching of names is unsuitable. Raw text remains data e
 0 means success, including no results. 1 means incorrect arguments. 2 means authentication needs refresh.
 3 means the client exhausted its bounded rate-limit retries; report the wait interval instead of starting a retry loop.
 4 means not found. 5 means another API or network error. Preserve the error's meaning in the response.
+
+## Workspace profiles
+
+Use `--profile NAME` when the user specifies a workspace. Otherwise use the configured
+default. Selection order is `--profile`, `TACK_PROFILE`, then `default_profile` in
+`~/.config/tack/config.toml` (`TACK_CONFIG` overrides the path).
+Profiles contain `workspace_url`, `token_env`, and `cookie_env`. The latter two are
+environment variable names, never credential values. Missing profile credentials
+return exit 2; do not retry against another workspace. Without a selected profile,
+the legacy `SLACK_*` environment remains supported.
+
+```sh
+tack --profile personal mentions --since 7d --limit 20 --json
+tack whoami --profile accela --json
+```

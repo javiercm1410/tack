@@ -6,6 +6,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/x/ansi v0.9.3
 	github.com/charmbracelet/x/term v0.2.1
+	github.com/pelletier/go-toml/v2 v2.2.4
 )
 
 require (

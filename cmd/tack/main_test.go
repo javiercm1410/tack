@@ -190,3 +190,12 @@ func TestDMSearchGroupsLatestMessages(t *testing.T) {
 		}
 	}
 }
+
+func TestProfileFlag(t *testing.T) {
+	for _, args := range [][]string{{"--profile", "other", "whoami"}, {"whoami", "--profile=other"}} {
+		o, err := parse(args, time.Now())
+		if err != nil || o.profile != "other" {
+			t.Fatal(o, err)
+		}
+	}
+}

@@ -8,7 +8,8 @@ Go 1.26.10 or later:
 go install github.com/javiercm1410/tack/cmd/tack@latest
 ```
 Release archives include macOS, Linux, and Windows binaries with SHA-256 checksums.
-After the first release, `sh scripts/install.sh v0.1.0` installs a verified binary into `~/.local/bin`.
+Run `sh scripts/install.sh v0.1.0` from this repository to install the verified release into `~/.local/bin`.
+Confirm the installation with `tack --version`.
 Build locally with `task build`. Use `go build -tags plain ./cmd/tack` for the standard-library-only renderer.
 ## Authentication
 
@@ -25,6 +26,44 @@ tack whoami
 ```
 Every child process of that shell can read these environment variables.
 The macOS interactive `security ... -w` prompt can truncate long values; use `-w "$(pbpaste)"` instead.
+
+## Workspace profiles
+
+Create `~/.config/tack/config.toml` (or `$XDG_CONFIG_HOME/tack/config.toml`):
+
+```toml
+default_profile = "accela"
+
+[profiles.accela]
+workspace_url = "https://accela.slack.com"
+token_env = "SLACK_XOXC_TOKEN"
+cookie_env = "SLACK_XOXD_TOKEN"
+
+[profiles.personal]
+workspace_url = "https://example.slack.com"
+token_env = "PERSONAL_SLACK_XOXC_TOKEN"
+cookie_env = "PERSONAL_SLACK_XOXD_TOKEN"
+```
+
+Profiles reference environment variable names. Keep token values in your existing
+secret store and export them before use. Config contains no credentials.
+
+```sh
+tack mentions --since 7d                 # default profile
+tack --profile personal mentions --json
+tack whoami --profile personal --json
+TACK_PROFILE=personal tack whoami
+```
+
+See the [profile setup guide](docs/AUTHENTICATION.md#multiple-workspaces-with-profiles)
+for separate Keychain entries, environment exports, and default profile changes.
+
+Selection order: `--profile`, then `TACK_PROFILE`, then `default_profile`.
+`TACK_CONFIG` overrides the config file path. Unknown profiles and malformed
+configuration return exit 1. Missing profile credentials return exit 2. Selected
+profiles never fall back to another profile's credentials. Without a selected or
+default profile, the original `SLACK_*` environment authentication still works.
+Name caches remain isolated by workspace and session. Help and version need no config.
 
 ## Commands
 

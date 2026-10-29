@@ -26,6 +26,8 @@ archives:
       - LICENSE
       - README.md
       - skill/SKILL.md
+      - docs/AUTHENTICATION.md
+      - docs/IMPLEMENTATION.md
 checksum:
   name_template: checksums.txt
 changelog:
