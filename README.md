@@ -8,24 +8,23 @@ Go 1.26.10 or later:
 go install github.com/javiercm1410/tack/cmd/tack@latest
 ```
 Release archives include macOS, Linux, and Windows binaries with SHA-256 checksums.
-Run `sh scripts/install.sh v0.1.0` from this repository to install the verified release into `~/.local/bin`.
+Run `sh scripts/install.sh v0.2.0` from this repository to install the verified release into `~/.local/bin`.
 Confirm the installation with `tack --version`.
 Build locally with `task build`. Use `go build -tags plain ./cmd/tack` for the standard-library-only renderer.
 ## Authentication
 
-Set `SLACK_WORKSPACE_URL` to your HTTPS Slack workspace URL. There is no default workspace.
-Set `SLACK_XOXC_TOKEN` and `SLACK_XOXD_TOKEN` from the same browser session.
-Preserve the cookie encoding. See [authentication setup](docs/AUTHENTICATION.md).
-
-If you store the values in macOS Keychain under service `tack`:
 ```sh
-export SLACK_WORKSPACE_URL='https://example.slack.com'
-export SLACK_XOXC_TOKEN="$(security find-generic-password -s tack -a xoxc -w 2>/dev/null)"
-export SLACK_XOXD_TOKEN="$(security find-generic-password -s tack -a xoxd -w 2>/dev/null)"
+tack login     # paste the xoxc token and the d cookie; input is hidden
+source ~/.config/tack/credentials.env
 tack whoami
 ```
-Every child process of that shell can read these environment variables.
-The macOS interactive `security ... -w` prompt can truncate long values; use `-w "$(pbpaste)"` instead.
+
+`tack login` shows where to find both values, checks them with Slack, and saves them as
+`export` lines in a private `credentials.env` next to `config.toml`. Add
+`[ -r ~/.config/tack/credentials.env ] && . ~/.config/tack/credentials.env` to `~/.zshrc`
+to load them in every shell. At run time `tack` reads only environment variables, so a secret
+manager that exports the same names also works. Run `tack login` again after exit code 2.
+See [authentication setup](docs/AUTHENTICATION.md).
 
 ## Workspace profiles
 
@@ -39,8 +38,8 @@ tack config default accela      # set the persistent default
 ```
 
 `config add` preserves existing profiles and asks before it saves. It requires an
-interactive terminal and does not accept token values. Export the chosen credential
-variables, then run `tack whoami --profile NAME --json` to verify access.
+interactive terminal and does not accept token values. Run `tack login NAME` to store
+the session, or export the chosen variables yourself.
 
 
 Create `~/.config/tack/config.toml` (or `$XDG_CONFIG_HOME/tack/config.toml`):
@@ -59,8 +58,8 @@ token_env = "PERSONAL_SLACK_XOXC_TOKEN"
 cookie_env = "PERSONAL_SLACK_XOXD_TOKEN"
 ```
 
-Profiles reference environment variable names. Keep token values in your existing
-secret store and export them before use. Config contains no credentials.
+Profiles reference environment variable names. `tack login NAME` stores their values in
+`credentials.env`; `config.toml` contains no credentials.
 
 ```sh
 tack mentions --since 7d                 # default profile
@@ -70,7 +69,7 @@ TACK_PROFILE=personal tack whoami
 ```
 
 See the [profile setup guide](docs/AUTHENTICATION.md#multiple-workspaces-with-profiles)
-for separate Keychain entries, environment exports, and default profile changes.
+for login, credential loading, and default profile changes.
 
 Selection order: `--profile`, then `TACK_PROFILE`, then `default_profile`.
 `TACK_CONFIG` overrides the config file path. Unknown profiles and malformed

@@ -43,7 +43,7 @@ func runConfig(o options, input io.Reader, interactive bool, out, errOut io.Writ
 		}
 	}
 	if action == "add" {
-		if err = onboardProfile(&cfg, path, o.args, input, out); err != nil {
+		if err = onboardProfile(&cfg, path, o.args, bufio.NewReader(input), out); err != nil {
 			return fail(out, errOut, false, err, nil)
 		}
 	}
@@ -88,8 +88,7 @@ func runConfig(o options, input io.Reader, interactive bool, out, errOut io.Writ
 	return 0
 }
 
-func onboardProfile(cfg *config.Config, path string, args []string, input io.Reader, out io.Writer) error {
-	reader := bufio.NewReader(input)
+func onboardProfile(cfg *config.Config, path string, args []string, reader *bufio.Reader, out io.Writer) error {
 	ask := func(label, fallback string) (string, error) {
 		suffix := ""
 		if fallback != "" {
@@ -168,6 +167,6 @@ func onboardProfile(cfg *config.Config, path string, args []string, input io.Rea
 	if err = config.Save(path, *cfg); err != nil {
 		return err
 	}
-	emit(out, "Saved profile. Export its credential variables, then verify with:\n  tack whoami --profile "+name+" --json\n", nil)
+	emit(out, "Saved profile. Run tack login "+name+" to store its session.\n", nil)
 	return nil
 }
