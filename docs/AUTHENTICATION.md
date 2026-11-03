@@ -1,40 +1,61 @@
 # Authentication
 
 `tack` uses a browser session, not a Slack application token. Your organization must permit this access.
-The CLI reads environment variables only. It does not collect browser data or access Keychain automatically.
+At run time, `tack` reads credentials from environment variables only. `tack login` collects the
+two session values that you paste, checks them with Slack, and saves them as shell exports.
 
-1. Sign in to your workspace in the Slack web application.
-2. Open the browser's developer tools on the Slack application page.
-3. Find the selected workspace token in `localStorage.localConfig_v2.teams`.
-4. Copy that workspace's token into `SLACK_XOXC_TOKEN` through your secret manager.
-5. Find the HttpOnly cookie named `d` for the Slack domain in the browser's cookie storage.
-6. Copy the cookie, with its original URL encoding, into `SLACK_XOXD_TOKEN` through your secret manager.
-7. Set `SLACK_WORKSPACE_URL` to the workspace's HTTPS URL.
-8. Run `tack whoami`.
-
-Both session values must come from the same browser session. Refresh both values after exit code 2.
-Do not send tokens in chat, issues, screenshots, shell command arguments to `tack`, or committed files.
-
-## Optional macOS Keychain storage
-
-After you copy each value, these commands store it under a neutral service name:
+## Log in
 
 ```sh
-security add-generic-password -U -s tack -a xoxc -w "$(pbpaste)"
-security add-generic-password -U -s tack -a xoxd -w "$(pbpaste)"
+tack login            # prompt for a profile; Enter selects the default profile
+tack login personal   # log in a named profile; create it if it does not exist
 ```
 
-Run each command only after you copy the corresponding value. The interactive password prompt can truncate long values.
-The explicit `-w` argument avoids that prompt, but the value exists briefly in the `security` process arguments.
-A password manager can avoid this command-line storage step. Clear the clipboard after storage.
-The README shows how to load the values into a shell without saving them in a shell configuration file.
-Every child process of that shell inherits the values. Use a dedicated shell session when practical.
+`tack login` does these steps:
+
+1. It selects or creates the profile. A new profile asks for the workspace URL and variable names.
+2. It shows where to find the two values, then reads each value with hidden input.
+3. It checks the values with `auth.test`. If Slack rejects them, it saves nothing.
+4. It writes `export` lines for the profile's two variables to `credentials.env`.
+5. It prints the `source` command that loads the new values into the current shell.
+
+Collect the values from one signed-in browser tab of the Slack web application:
+
+- **Token** (`xoxc-...`): in the developer tools console, run
+  `copy(Object.values(JSON.parse(localStorage.localConfig_v2).teams).find(t => t.url.includes('<workspace>.slack.com')).token)`.
+- **Cookie** (`xoxd-...`): in the developer tools storage view, open the cookies for
+  `https://app.slack.com` and copy cookie `d` (not `d-s`). Keep its URL encoding.
+
+Both values must come from the same browser session. Do not use a private window, and do not
+sign out of that tab: Slack then ends the session and `tack` returns exit code 2.
+Run `tack login` again after exit code 2.
+
+## Load the credentials
+
+`credentials.env` is next to `config.toml`, normally `~/.config/tack/credentials.env`.
+It has private permissions (0600) and holds one `export` line per variable. A new login replaces
+only the lines of its own profile. A program cannot change its parent shell, so load the file:
+
+```sh
+source ~/.config/tack/credentials.env                                  # current shell
+[ -r ~/.config/tack/credentials.env ] && . ~/.config/tack/credentials.env   # add to ~/.zshrc
+```
+
+The file always overwrites the variables. After a new login, source it again in every open shell
+that still has the old values. Restart an agent that started before the change.
+A scheduled job must source the file itself. Every child process of the shell inherits the values.
+
+The file stores the session in plain text. Do not commit it, share it, or put it in a backup that
+other people can read. To use a secret manager instead, export the same variable names yourself;
+`tack` reads only the environment.
+Do not send tokens in chat, issues, screenshots, or shell command arguments to `tack`.
 
 ## Multiple workspaces with profiles
 
 ### Interactive setup
 
-Run `tack config add` in your terminal. The setup asks for:
+Run `tack login NAME` to create a profile and log in at the same time. Run `tack config add`
+to create a profile without credentials. The setup asks for:
 
 1. A unique profile name.
 2. The HTTPS URL of the Slack workspace.
@@ -56,25 +77,18 @@ tack config default accela
 tack config default accela --json
 ```
 
-The setup saves environment variable names, not credential values. Populate these
-variables through your secret manager using the examples below. `tack config`
+`config.toml` saves environment variable names, not credential values. `tack config`
 reports whether both variables are set; it does not verify Slack authentication.
 Run `tack whoami --profile personal --json` to verify the configured session.
 
-The setup works before credentials exist. For automated setup, write the TOML file
-and use `tack config --json` to inspect it. Interactive setup rejects `--json` and
-piped input. Configuration changes preserve other profiles and replace the file
-atomically with private permissions. TOML comments and formatting are rewritten.
+For automated setup, write the TOML file and use `tack config --json` to inspect it.
+Interactive setup and `tack login` reject `--json` and piped input. Configuration changes
+preserve other profiles and replace the file atomically with private permissions.
+TOML comments and formatting are rewritten.
 `TACK_PROFILE` and `--profile` override the saved default for reads; they do not
 change which profile `tack config default NAME` saves as the persistent default.
 
 ### Manual setup
-
-Create the configuration directory:
-
-```sh
-mkdir -p ~/.config/tack
-```
 
 Save this configuration as `~/.config/tack/config.toml`:
 
@@ -96,43 +110,7 @@ Replace the second workspace URL with your actual workspace URL.
 Each profile references two environment variable names. It contains no token values.
 The workspace URL comes from the selected profile, rather than `SLACK_WORKSPACE_URL`.
 Use letters, digits, underscores, or hyphens in profile names.
-
-### Preserve your existing workspace
-
-The `accela` profile above uses the original credential variable names.
-Keep your current credential exports. Commands without `--profile` use Accela.
-If your existing Keychain entries use service `slack-mcp`, keep that service name.
-There is no need to copy or replace the existing credentials.
-
-### Configure another workspace
-
-Sign in to the other workspace and collect its session values using the steps above.
-Store its credentials under a separate Keychain service, such as `tack-personal`.
-After you copy its `xoxc` value, run:
-
-```sh
-security add-generic-password -U -s tack-personal -a xoxc -w "$(pbpaste)"
-```
-
-After you copy its `d` cookie, run:
-
-```sh
-security add-generic-password -U -s tack-personal -a xoxd -w "$(pbpaste)"
-pbcopy </dev/null
-```
-
-Export the two variable names from the `personal` profile:
-
-```sh
-export PERSONAL_SLACK_XOXC_TOKEN="$(security find-generic-password -s tack-personal -a xoxc -w 2>/dev/null)"
-export PERSONAL_SLACK_XOXD_TOKEN="$(security find-generic-password -s tack-personal -a xoxd -w 2>/dev/null)"
-tack whoami --profile personal --json
-```
-
-Add these exports to `~/.zshrc` if each new interactive shell must load them.
-Open a new shell after the change. Restart an agent that started before the exports.
-A scheduled job must load these variables itself; it does not read `~/.zshrc` automatically.
-Other systems can use their existing secret manager to populate the same variables.
+Then run `tack login accela` and `tack login personal`.
 
 ### Select and verify a profile
 
@@ -155,7 +133,7 @@ On Windows, `USERPROFILE` supplies the home directory when `HOME` is unset.
 Without a selected or default profile, the original three `SLACK_*` variables still work.
 
 Unknown profiles, unknown TOML fields, invalid URLs, and malformed configuration return exit 1.
-Missing or expired credentials return exit 2. Refresh only the affected profile's session values.
+Missing or expired credentials return exit 2. Run `tack login NAME` for the affected profile.
 The name cache remains isolated by workspace URL and session token.
 
 ## Network boundaries

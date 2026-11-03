@@ -37,7 +37,7 @@ func APIError(method, kind string) *Error {
 	code, msg := 5, method+": "+kind
 	switch kind {
 	case "invalid_auth", "not_authed", "token_revoked", "account_inactive":
-		code, msg = 2, "Slack rejected the session. Re-collect both values (README Authentication)."
+		code, msg = 2, "Slack rejected the session. Run tack login to store a new session."
 	case "ratelimited":
 		code, msg = 3, "Rate limited by Slack."
 	case "channel_not_found", "user_not_found", "thread_not_found", "message_not_found":
